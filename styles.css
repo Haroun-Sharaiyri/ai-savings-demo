@@ -27,6 +27,7 @@
   --red-bg:       #fef2f2;
   --red-border:   #fecaca;
   --mono-bg:      #f1f5f9;
+  --bg-header:    rgba(255, 255, 255, 0.85);
   --shadow:       0 1px 3px rgba(0,0,0,.06), 0 1px 2px rgba(0,0,0,.04);
   --shadow-lg:    0 4px 12px rgba(0,0,0,.08);
   color-scheme: light;
@@ -53,6 +54,7 @@
   --red-bg:       #3b0a0a;
   --red-border:   #7f1d1d;
   --mono-bg:      #1a2640;
+  --bg-header:    rgba(11, 17, 32, 0.85);
   --shadow:       0 1px 3px rgba(0,0,0,.3);
   --shadow-lg:    0 4px 12px rgba(0,0,0,.4);
   color-scheme: dark;
@@ -85,6 +87,22 @@ h3 { font-size: 1.05rem; font-weight: 600; }
   word-break: break-all;
 }
 
+/* ── Background Canvas (Snow / Particles) ─────────────────────────── */
+#bg-canvas {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  pointer-events: none;
+  z-index: 0;
+}
+
+header, main, footer {
+  position: relative;
+  z-index: 1;
+}
+
 /* ── Layout ────────────────────────────────────────────────────────── */
 .container { max-width: 960px; margin: 0 auto; padding: 0 1.5rem; width: 100%; }
 
@@ -93,8 +111,9 @@ header {
   border-bottom: 1px solid var(--border);
   padding: 1.5rem 0;
   position: sticky; top: 0; z-index: 100;
-  background: var(--bg);
+  background: var(--bg-header);
   backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
 }
 header .container {
   display: flex; align-items: center; gap: 1rem; flex-wrap: wrap;

@@ -462,3 +462,80 @@ document.getElementById("btn-anchor").addEventListener("click", () => {
     </div>
   `;
 });
+
+// ══════════════════════════════════════════════════════════════════════
+//  Background Snow / Particle Animation
+// ══════════════════════════════════════════════════════════════════════
+function initSnow() {
+  const canvas = document.getElementById("bg-canvas");
+  if (!canvas) return;
+  const ctx = canvas.getContext("2d");
+  let width = 0;
+  let height = 0;
+
+  function resize() {
+    const dpr = window.devicePixelRatio || 1;
+    width = window.innerWidth;
+    height = window.innerHeight;
+    canvas.width = width * dpr;
+    canvas.height = height * dpr;
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  }
+  window.addEventListener("resize", resize);
+  resize();
+
+  // Create lightweight particles
+  const count = Math.min(85, Math.max(40, Math.floor(width / 20)));
+  const particles = [];
+  for (let i = 0; i < count; i++) {
+    particles.push({
+      x: Math.random() * width,
+      y: Math.random() * height,
+      r: 1.1 + Math.random() * 2.2,
+      speedY: 0.35 + Math.random() * 0.7,
+      speedX: (Math.random() - 0.5) * 0.3,
+      sway: 0.3 + Math.random() * 0.6,
+      swaySpeed: 0.01 + Math.random() * 0.018,
+      angle: Math.random() * Math.PI * 2,
+      opacity: 0.2 + Math.random() * 0.55,
+    });
+  }
+
+  function animate() {
+    ctx.clearRect(0, 0, width, height);
+
+    const isDark = document.documentElement.getAttribute("data-theme") === "dark";
+    // Navy blue in light mode (rgb 22, 42, 86); White in dark mode (rgb 255, 255, 255)
+    const baseColor = isDark ? "255, 255, 255" : "22, 42, 86";
+
+    for (let i = 0; i < particles.length; i++) {
+      const p = particles[i];
+      p.angle += p.swaySpeed;
+      p.y += p.speedY;
+      p.x += p.speedX + Math.sin(p.angle) * (p.sway * 0.45);
+
+      if (p.y > height + 6) {
+        p.y = -6;
+        p.x = Math.random() * width;
+      }
+      if (p.x > width + 6) p.x = -6;
+      else if (p.x < -6) p.x = width + 6;
+
+      ctx.beginPath();
+      ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2);
+      ctx.fillStyle = `rgba(${baseColor}, ${p.opacity})`;
+      ctx.fill();
+    }
+
+    requestAnimationFrame(animate);
+  }
+
+  requestAnimationFrame(animate);
+}
+
+// Start snow animation on load
+if (document.readyState === "loading") {
+  document.addEventListener("DOMContentLoaded", initSnow);
+} else {
+  initSnow();
+}
