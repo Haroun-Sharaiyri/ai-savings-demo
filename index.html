@@ -1,0 +1,141 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Proof of AI Savings</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+
+<!-- ═══════════════════════════════════════════════════════════════════
+     Header
+     ═══════════════════════════════════════════════════════════════════ -->
+<header>
+  <div class="container">
+    <div>
+      <h1>Proof of AI Savings</h1>
+      <div class="subtitle">a verification prototype</div>
+    </div>
+    <button id="theme-toggle" title="Toggle dark mode">☀️</button>
+  </div>
+</header>
+
+<main class="container">
+
+  <!-- ── Step 1 · Data ─────────────────────────────────────────────── -->
+  <section id="step-data" class="pipeline-step">
+    <div class="step-header">
+      <span class="step-number">1</span>
+      <h2>Generate Data</h2>
+    </div>
+    <p class="step-desc">
+      Create 1,200 fake contact-center conversations — 600 baseline ("before AI")
+      and 600 "after AI" — using a seeded random generator so the data is the same
+      every time you reload.
+    </p>
+    <button class="run-btn" id="btn-generate">Run</button>
+    <div id="output-data" class="output"></div>
+  </section>
+
+  <!-- ── Step 2 · Scramble ─────────────────────────────────────────── -->
+  <section id="step-scramble" class="pipeline-step">
+    <div class="step-header">
+      <span class="step-number">2</span>
+      <h2>Scramble PII</h2>
+    </div>
+    <p class="step-desc">
+      Replace employee IDs and customer phone numbers with HMAC-SHA256 codes
+      so the data can be audited without exposing anyone's identity.
+    </p>
+    <div class="input-group">
+      <input type="text" id="hmac-key" placeholder="Type an HMAC key…" style="flex:1;min-width:180px">
+      <button class="btn-secondary" id="btn-random-key">Random key</button>
+    </div>
+    <button class="run-btn" id="btn-scramble" disabled>Run</button>
+    <div id="output-scramble" class="output"></div>
+  </section>
+
+  <!-- ── Step 3 · Measure + Quality Gate ───────────────────────────── -->
+  <section id="step-measure" class="pipeline-step">
+    <div class="step-header">
+      <span class="step-number">3</span>
+      <h2>Measure &amp; Quality Gate</h2>
+    </div>
+    <p class="step-desc">
+      Compare before vs. after across every channel. Calculate hours saved per day,
+      then check quality: a channel only <strong>passes</strong> if satisfaction
+      drops by 2 points or less <em>and</em> first-contact resolution does not drop.
+    </p>
+    <button class="run-btn" id="btn-measure" disabled>Run</button>
+    <div id="output-measure" class="output"></div>
+  </section>
+
+  <!-- ── Step 4 · Lock ─────────────────────────────────────────────── -->
+  <section id="step-lock" class="pipeline-step">
+    <div class="step-header">
+      <span class="step-number">4</span>
+      <h2>Lock (Merkle Tree)</h2>
+    </div>
+    <p class="step-desc">
+      Hash every clean record into a leaf. Pair leaves into a binary tree until
+      a single root hash remains. That root is a fingerprint of every record:
+      change one byte anywhere and the root changes too.
+    </p>
+    <button class="run-btn" id="btn-lock" disabled>Run</button>
+    <div id="output-lock" class="output"></div>
+  </section>
+
+  <!-- ── Step 5 · Prove + Tamper ───────────────────────────────────── -->
+  <section id="step-prove" class="pipeline-step">
+    <div class="step-header">
+      <span class="step-number">5</span>
+      <h2>Prove &amp; Tamper</h2>
+    </div>
+    <p class="step-desc">
+      Pick any record and verify it's included in the tree. Then tamper with one
+      field and see the proof break instantly.
+    </p>
+    <div class="input-group">
+      <label for="proof-index" class="text-sm fw-600">Record #</label>
+      <input type="number" id="proof-index" min="0" max="1199" value="0" style="width:100px">
+      <button class="run-btn" id="btn-prove" disabled>Verify</button>
+      <button class="btn-danger" id="btn-tamper" disabled>⚠ Change handle time by 1 s</button>
+    </div>
+    <div id="output-prove" class="output"></div>
+  </section>
+
+  <!-- ── Step 6 · Anchor ───────────────────────────────────────────── -->
+  <section id="step-anchor" class="pipeline-step">
+    <div class="step-header">
+      <span class="step-number">6</span>
+      <h2>Anchor</h2>
+    </div>
+    <p class="step-desc">
+      Download a receipt containing the Merkle root, record count, and verified
+      savings. You could timestamp this at
+      <a href="https://opentimestamps.org" target="_blank" rel="noopener">opentimestamps.org</a>
+      to prove when the data was locked.
+    </p>
+    <button class="run-btn" id="btn-anchor" disabled>Download merkle_root.txt</button>
+    <div id="output-anchor" class="output"></div>
+  </section>
+
+</main>
+
+<!-- ═══════════════════════════════════════════════════════════════════
+     Footer
+     ═══════════════════════════════════════════════════════════════════ -->
+<footer>
+  <div class="container">
+    <p>Built by Haroun Sharaiyri · fake data · learning prototype</p>
+    <div class="footer-links">
+      <a href="https://github.com" target="_blank" rel="noopener">GitHub</a>
+    </div>
+  </div>
+</footer>
+
+<script src="logic.js"></script>
+<script src="ui.js"></script>
+</body>
+</html>

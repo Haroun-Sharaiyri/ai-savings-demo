@@ -1,0 +1,156 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Tests — Proof of AI Savings</title>
+  <style>
+    body { font-family: monospace; background: #0b1120; color: #e2e8f0; padding: 2rem; line-height: 1.7; }
+    .pass { color: #34d399; }
+    .fail { color: #f87171; font-weight: bold; }
+    h1 { font-size: 1.3rem; margin-bottom: 1rem; }
+    .summary { margin-top: 1.5rem; padding: 1rem; border-radius: 8px; font-size: 1.1rem; }
+    .summary.all-pass { background: #052e1c; border: 1px solid #065f46; }
+    .summary.has-fail { background: #3b0a0a; border: 1px solid #7f1d1d; }
+  </style>
+</head>
+<body>
+<h1>Proof of AI Savings — Test Suite</h1>
+<div id="log"></div>
+<div id="summary"></div>
+
+<script src="logic.js"></script>
+<script>
+"use strict";
+
+const log = document.getElementById("log");
+const summaryEl = document.getElementById("summary");
+let passed = 0, failed = 0;
+
+function ok(condition, name) {
+  if (condition) {
+    log.innerHTML += `<div class="pass">✓ ${name}</div>`;
+    passed++;
+  } else {
+    log.innerHTML += `<div class="fail">✗ ${name}</div>`;
+    failed++;
+  }
+}
+
+async function runTests() {
+  const t0 = performance.now();
+
+  // ─── Test 1: Data generation produces 1 200 records ───────────
+  const records = generateAllRecords();
+  ok(records.length === 1200, "generateAllRecords returns 1200 records");
+  ok(records.filter(r => r.period === "before").length === 600, "600 before records");
+  ok(records.filter(r => r.period === "after").length === 600, "600 after records");
+
+  // ─── Test 2: Deterministic — same seed gives same data ────────
+  const records2 = generateAllRecords();
+  ok(records[0].interaction_id === records2[0].interaction_id, "Deterministic: same first record");
+  ok(records[599].handle_time_secs === records2[599].handle_time_secs, "Deterministic: same 600th record");
+
+  // ─── Test 3: Canonical JSON is deterministic ──────────────────
+  const json1 = canonicalJSON(records[0]);
+  const json2 = canonicalJSON({ ...records[0] }); // copied object
+  ok(json1 === json2, "canonicalJSON is deterministic for equal objects");
+
+  // ─── Test 4: SHA-256 and HMAC work ────────────────────────────
+  const h1 = await sha256("hello");
+  const h2 = await sha256("hello");
+  ok(h1 === h2, "SHA-256 is deterministic");
+  ok(h1.length === 64, "SHA-256 returns 64-char hex");
+
+  const hm1 = await hmacSha256("key1", "msg");
+  const hm2 = await hmacSha256("key1", "msg");
+  const hm3 = await hmacSha256("key2", "msg");
+  ok(hm1 === hm2, "HMAC is deterministic with same key");
+  ok(hm1 !== hm3, "HMAC differs with different key");
+
+  // ─── Test 5: Scramble removes PII ─────────────────────────────
+  const scrambled = await scrambleRecords(records.slice(0, 10), "testkey");
+  ok(scrambled[0].agent_id.length === 64, "Scrambled agent_id is a hash");
+  ok(scrambled[0].customer_phone.length === 64, "Scrambled phone is a hash");
+  ok(scrambled[0].agent_id !== records[0].agent_id, "Agent ID is replaced");
+  ok(scrambled[0].raw_hash && scrambled[0].raw_hash.length === 64, "raw_hash is present");
+
+  // ─── Test 6: Metrics compute correctly ────────────────────────
+  const m = computeMetrics(records);
+  ok(typeof m.totalVerifiedHours === "number", "totalVerifiedHours is a number");
+  ok(typeof m.totalHeldHours === "number", "totalHeldHours is a number");
+  ok(m.channels.whatsapp && !m.channels.whatsapp.pass, "WhatsApp fails quality gate (CSAT drops > 2pp)");
+  ok(m.channels.voice && m.channels.voice.pass, "Voice passes quality gate");
+  ok(m.actionCounts.accepted + m.actionCounts.edited + m.actionCounts.rejected > 0, "Action counts are populated");
+
+  // ─── Test 7: Merkle tree for various sizes ────────────────────
+  const testSizes = [1, 2, 3, 5, 7, 1001];
+  for (const size of testSizes) {
+    const recs = [];
+    for (let i = 0; i < size; i++) recs.push({ id: i, value: `test-${i}` });
+    const tree = await buildMerkleTree(recs);
+    ok(tree.root && tree.root.length === 64, `Tree size ${size}: root is a valid hash`);
+    ok(tree.levels[0].length === size, `Tree size ${size}: leaf count matches`);
+    ok(tree.levels[tree.levels.length - 1].length === 1, `Tree size ${size}: single root`);
+
+    // Verify every inclusion proof
+    let allValid = true;
+    for (let i = 0; i < size; i++) {
+      const leaf = await merkleLeafHash(canonicalJSON(recs[i]));
+      const proof = getInclusionProof(tree, i);
+      const valid = await verifyInclusionProof(leaf, proof, tree.root);
+      if (!valid) { allValid = false; break; }
+    }
+    ok(allValid, `Tree size ${size}: every inclusion proof verifies`);
+  }
+
+  // ─── Test 8: Full 1200-record tree — all proofs verify ────────
+  log.innerHTML += `<div style="color:#94a3b8">Building full 1200-record tree (may take a moment)…</div>`;
+  await new Promise(r => setTimeout(r, 50)); // let DOM update
+
+  const fullTree = await buildMerkleTree(records);
+  ok(fullTree.root.length === 64, "Full tree: root is a valid hash");
+  ok(fullTree.levels[0].length === 1200, "Full tree: 1200 leaves");
+
+  // Check a sample of proofs (every 100th + first + last)
+  const indicesToCheck = [0, 1, 100, 200, 500, 599, 600, 601, 900, 1100, 1199];
+  let allFullValid = true;
+  for (const i of indicesToCheck) {
+    const leaf = await merkleLeafHash(canonicalJSON(records[i]));
+    const proof = getInclusionProof(fullTree, i);
+    const valid = await verifyInclusionProof(leaf, proof, fullTree.root);
+    if (!valid) { allFullValid = false; break; }
+  }
+  ok(allFullValid, "Full tree: sampled inclusion proofs all verify");
+
+  // ─── Test 9: Changing any single record changes the root ──────
+  const tamperIndices = [0, 1, 599, 600, 1199];
+  let allRootsChanged = true;
+  for (const i of tamperIndices) {
+    const tampered = records.map((r, j) => {
+      if (j === i) return { ...r, handle_time_secs: r.handle_time_secs + 1 };
+      return r;
+    });
+    const tTree = await buildMerkleTree(tampered);
+    if (tTree.root === fullTree.root) { allRootsChanged = false; break; }
+  }
+  ok(allRootsChanged, "Changing any single record changes the root");
+
+  // ─── Summary ──────────────────────────────────────────────────
+  const elapsed = ((performance.now() - t0) / 1000).toFixed(2);
+  const total = passed + failed;
+  if (failed === 0) {
+    summaryEl.className = "summary all-pass";
+    summaryEl.innerHTML = `<span class="pass">All ${total} tests passed</span> in ${elapsed}s`;
+  } else {
+    summaryEl.className = "summary has-fail";
+    summaryEl.innerHTML = `<span class="fail">${failed} of ${total} tests failed</span> in ${elapsed}s`;
+  }
+}
+
+runTests().catch(e => {
+  log.innerHTML += `<div class="fail">FATAL: ${e.message}</div>`;
+  console.error(e);
+});
+</script>
+</body>
+</html>
